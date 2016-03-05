@@ -1,0 +1,31 @@
+{
+  "name": "civil-defense",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {},
+  "keywords": [
+    "civil",
+    "defense",
+    "schedule"
+  ],
+  "author": {
+    "name": "egg",
+    "email": "i@egg.pe.kr"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:egg-/civil-defense.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "matchdep": "^1.0.1",
+    "grunt-nodemon": "^0.4.1"
+  },
+  "dependencies": {
+    "cheerio": "^0.20.0",
+    "lodash": "^4.6.1",
+    "moment": "^2.11.2",
+    "request": "^2.69.0"
+  }
+}
