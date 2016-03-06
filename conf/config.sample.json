@@ -1,0 +1,11 @@
+{
+  "crawler": {
+    "duration": 6
+  },
+  "pouch": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "name": "civil_schedules",
+    "size": 10
+  }
+}

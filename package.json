@@ -23,9 +23,13 @@
     "grunt-nodemon": "^0.4.1"
   },
   "dependencies": {
+    "async": "^1.5.2",
     "cheerio": "^0.20.0",
+    "iterator-runner": "^0.1.0",
     "lodash": "^4.6.1",
     "moment": "^2.11.2",
-    "request": "^2.69.0"
+    "request": "^2.69.0",
+    "simple-pouch": "^0.2.0",
+    "winston": "^2.2.0"
   }
 }
