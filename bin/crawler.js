@@ -11,12 +11,12 @@ var logger = init.logger('crawler')
 
 run(function * () {
   try {
-    var conncurent = 1
+    var conncurent = 5
     var config = init.config()
     var loader = require('./crawler/loader').create(logger)
     var pouch = yield init.pouch.bind(null)
     var start = moment().utcOffset(540).startOf('month')
-    var end = moment().utcOffset(540).endOf('month').add(config.duration, 'months')
+    var end = moment().utcOffset(540).endOf('month').add(config.crawler.duration, 'months')
     var count = 0
 
     var queue = async.queue(function (task, cb) {

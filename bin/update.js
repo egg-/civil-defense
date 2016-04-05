@@ -15,13 +15,13 @@ var sql = function (item) {
       item.end
     ])
   }
-  return mysql.format('INSERT INTO schedules SET ?', item)
+  return mysql.format('INSERT IGNORE INTO schedules SET ?', item)
 }
 
 run(function *() {
   try {
     var pouch = yield init.pouch.bind(null)
-    var client = yield init.mysql.bind(null, {
+    var client = init.db({
       multipleStatements: true
     })
     client.on('error', logger.error)

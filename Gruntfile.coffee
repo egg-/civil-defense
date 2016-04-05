@@ -40,6 +40,17 @@ module.exports = (grunt) ->
             nodemon.on 'restart', () ->
               console.log 'restart update.'
 
+      # nodemon.server
+      server:
+        script: 'bin/server.js'
+        options:
+          callback: (nodemon) ->
+            nodemon.on 'log', (evt) ->
+              console.log evt.colour
+
+            nodemon.on 'restart', () ->
+              console.log 'restart server.'
+
 
   grunt.initConfig taskConfig
 
@@ -52,4 +63,9 @@ module.exports = (grunt) ->
   grunt.registerTask 'update', () ->
     grunt.task.run [
       'nodemon:update'
+    ]
+    
+  grunt.registerTask 'server', () ->
+    grunt.task.run [
+      'nodemon:server'
     ]

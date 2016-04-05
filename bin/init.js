@@ -47,7 +47,7 @@ module.exports = {
       })
     })
   },
-  mysql: function (opt, cb) {
-    cb(null, require('mysql').createConnection(_.assign(config.database, opt || {})))
+  db: function (opt, cb) {
+    return require('mysql').createConnection(_.assign(config.database, opt || {}))
   }
 }
