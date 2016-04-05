@@ -20,21 +20,28 @@ run(function * () {
     })
     var loader = require('./crawler/loader').create(logger)
     var pouch = require('simple-pouch').create(config.pouch)
-    var start = moment().startOf('month')
-    var end = moment().endOf('month').add(config.duration, 'months')
+    var start = moment().utcOffset(540).startOf('month')
+    var end = moment().utcOffset(540).endOf('month').add(config.duration, 'months')
     var count = 0
 
-    var queue = async.queue(function (param, cb) {
+    var queue = async.queue(function (city, cb) {
       loader.schedules({
-        code: param.city.code,
-        start: param.start,
-        end: param.end
+        code: city.code,
+        start: start.format('YYYY-MM-DD'),
+        end: end.format('YYYY-MM-DD')
       }, function (err, schedules) {
         if (err) {
           return cb(err)
         }
 
         count += schedules.length
+
+        schedules.unshift({
+          action: 'delete',
+          city: city.code,
+          start: start.unix(),
+          end: end.unix()
+        })
 
         pouch.put(cb, _.map(schedules, function (schedule) {
           return JSON.stringify(schedule)
@@ -43,13 +50,7 @@ run(function * () {
     }, conncurent)
 
     var cities = yield loader.cities.bind()
-    _.each(cities, function (city) {
-      queue.push({
-        city: city,
-        start: start.format('YYYY-MM-DD'),
-        end: end.format('YYYY-MM-DD')
-      })
-    })
+    queue.push(cities)
 
     setInterval(function () {
       if (queue.length() === 0 && queue.idle()) {
