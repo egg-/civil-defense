@@ -30,7 +30,7 @@ var parser = {
     var matches = /.*pageIndex=(\d+)/.exec(url)
     return matches ? parseInt(matches[1], 10) : 0
   },
-  schedules: function ($) {
+  schedules: function (city, $) {
     var schedules = {}
     var schedule = null
 
@@ -76,8 +76,9 @@ var parser = {
         var start = [schedule.date, time[0]].join('T') + ':00+09:00'
         var end = [schedule.date, time[1]].join('T') + ':00+09:00'
 
-        schedule.start = moment(start).format()
-        schedule.end = moment(end).format()
+        schedule.city = city
+        schedule.start = moment(start).unix()
+        schedule.end = moment(end).unix()
 
         delete schedule.date
         delete schedule.time
@@ -144,7 +145,7 @@ function loader (logger) {
         endDate: param.end,
         pageIndex: param.page
       }, function (err, $) {
-        cb(err, err ? [] : parser.schedules($))
+        cb(err, err ? [] : parser.schedules(param.code, $))
       })
     },
 

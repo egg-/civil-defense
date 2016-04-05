@@ -7,5 +7,17 @@
     "port": 6379,
     "name": "civil_schedules",
     "size": 10
+  },
+  "database": {
+    "host": "",
+    "user": "",
+    "password": "",
+    "database": ""
+  },
+  "logger": {
+    "path": "logs/",
+    "level": "debug",
+    "maxsize": 1048576,
+    "maxFiles": 10
   }
 }

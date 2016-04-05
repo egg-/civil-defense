@@ -5,21 +5,16 @@
 var run = require('iterator-runner')
 var moment = require('moment')
 var async = require('async')
-var winston = require('winston')
 var _ = require('lodash')
+var init = require('./init')
+var logger = init.logger('crawler')
 
 run(function * () {
   try {
     var conncurent = 1
-    var config = require('../conf/config.json')
-    var logger = new (winston.Logger)({
-      level: 'debug',
-      transports: [
-        new (winston.transports.Console)()
-      ]
-    })
+    var config = init.config()
     var loader = require('./crawler/loader').create(logger)
-    var pouch = require('simple-pouch').create(config.pouch)
+    var pouch = yield init.pouch.bind(null)
     var start = moment().utcOffset(540).startOf('month')
     var end = moment().utcOffset(540).endOf('month').add(config.duration, 'months')
     var count = 0
@@ -37,9 +32,9 @@ run(function * () {
 
         count += schedules.length
 
-        pouch.put(cb, _.map(schedules, function (schedule) {
+        pouch.put(_.map(schedules, function (schedule) {
           return JSON.stringify(schedule)
-        }))
+        }), cb)
       })
     }, conncurent)
 
@@ -55,22 +50,20 @@ run(function * () {
       })
 
       // add clear data
-      pouch.put(function (err) {
-        if (err) throw err
-
-        // add tasks
-        for (var page = 1; page <= pageCount; page++) {
-          queue.push({
-            city: city,
-            page: page
-          })
-        }
-      }, [JSON.stringify({
+      yield pouch.put.bind(null, [JSON.stringify({
         action: 'delete',
         city: city.code,
         start: start.unix(),
         end: end.unix()
       })])
+
+      // add tasks
+      for (var page = 1; page <= pageCount; page++) {
+        queue.push({
+          city: city,
+          page: page
+        })
+      }
     }
 
     setInterval(function () {
@@ -81,6 +74,6 @@ run(function * () {
       }
     }, 1000)
   } catch (err) {
-    console.error(err)
+    logger.error(err)
   }
 })

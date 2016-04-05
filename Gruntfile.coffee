@@ -29,6 +29,17 @@ module.exports = (grunt) ->
             nodemon.on 'restart', () ->
               console.log 'restart crawler.'
 
+      # nodemon.update
+      update:
+        script: 'bin/update.js'
+        options:
+          callback: (nodemon) ->
+            nodemon.on 'log', (evt) ->
+              console.log evt.colour
+
+            nodemon.on 'restart', () ->
+              console.log 'restart update.'
+
 
   grunt.initConfig taskConfig
 
@@ -36,4 +47,9 @@ module.exports = (grunt) ->
   grunt.registerTask 'crawler', () ->
     grunt.task.run [
       'nodemon:crawler'
+    ]
+
+  grunt.registerTask 'update', () ->
+    grunt.task.run [
+      'nodemon:update'
     ]
