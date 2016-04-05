@@ -24,24 +24,18 @@ run(function * () {
     var end = moment().utcOffset(540).endOf('month').add(config.duration, 'months')
     var count = 0
 
-    var queue = async.queue(function (city, cb) {
+    var queue = async.queue(function (task, cb) {
       loader.schedules({
-        code: city.code,
+        code: task.city.code,
         start: start.format('YYYY-MM-DD'),
-        end: end.format('YYYY-MM-DD')
+        end: end.format('YYYY-MM-DD'),
+        page: task.page
       }, function (err, schedules) {
         if (err) {
           return cb(err)
         }
 
         count += schedules.length
-
-        schedules.unshift({
-          action: 'delete',
-          city: city.code,
-          start: start.unix(),
-          end: end.unix()
-        })
 
         pouch.put(cb, _.map(schedules, function (schedule) {
           return JSON.stringify(schedule)
@@ -50,7 +44,34 @@ run(function * () {
     }, conncurent)
 
     var cities = yield loader.cities.bind()
-    queue.push(cities)
+
+    for (var i = 0, pageCount, city; i < cities.length; i++) {
+      city = cities[i]
+
+      pageCount = yield loader.schedulePageCount.bind(null, {
+        code: city.code,
+        start: start.format('YYYY-MM-DD'),
+        end: end.format('YYYY-MM-DD')
+      })
+
+      // add clear data
+      pouch.put(function (err) {
+        if (err) throw err
+
+        // add tasks
+        for (var page = 1; page <= pageCount; page++) {
+          queue.push({
+            city: city,
+            page: page
+          })
+        }
+      }, [JSON.stringify({
+        action: 'delete',
+        city: city.code,
+        start: start.unix(),
+        end: end.unix()
+      })])
+    }
 
     setInterval(function () {
       if (queue.length() === 0 && queue.idle()) {

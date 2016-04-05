@@ -23,11 +23,18 @@ var parser = {
     })
     return cities
   },
+  schedulePageCount: function ($) {
+    var anchors = $('div.board_nav a')
+    var anchor = $(anchors[anchors.length - 1])
+    var url = anchor.attr('href')
+    var matches = /.*pageIndex=(\d+)/.exec(url)
+    return matches ? parseInt(matches[1], 10) : 0
+  },
   schedules: function ($) {
     var schedules = {}
     var schedule = null
 
-    $('table.civillist tbody tr').each(function () {
+    $($('table.civillist')[0]).find('tbody tr').each(function () {
       schedule = {}
       $(this).find('td').each(function (idx) {
         var $el = $(this)
@@ -45,8 +52,18 @@ var parser = {
           case 3: // 시간
             schedule.time = val.replace(/[\s\r\n\t]/gim, '')
             break
-          case 4: // 장소
-            schedule.place = val
+          // case 4: // 장소
+          //   schedule.place = val
+          // break
+          case 6: // 장소
+            var anchor = $el.find('a')
+            var addr = $(anchor).attr('href')
+            var regexp = /.*\('(.*)\',\s*\'(.*)\'\)/
+            var matches = regexp.exec(addr)
+            if (matches) {
+              schedule.place = matches[1]
+              schedule.addr = matches[2]
+            }
             break
         }
       })
@@ -115,6 +132,7 @@ function loader (logger) {
     * @param {number} param.code
     * @param {number} param.start
     * @param {number} param.end
+    * @param {number} param.page
     */
     schedules: function (param, cb) {
       // &areaCd01=6110000&areaCd02=&areaCd03=&holiDaySe=&strDate=2016-03-05&endDate=2016-04-05&eduTgtSeCd=&pageIndex=2
@@ -123,9 +141,30 @@ function loader (logger) {
       return _request({
         areaCd01: param.code,
         strDate: param.start,
-        endDate: param.end
+        endDate: param.end,
+        pageIndex: param.page
       }, function (err, $) {
         cb(err, err ? [] : parser.schedules($))
+      })
+    },
+
+    /**
+     * load schedule page count
+     * @param {object} param
+     * @param {number} param.code
+     * @param {number} param.start
+     * @param {number} param.end
+     */
+    schedulePageCount: function (param, cb) {
+      // &areaCd01=6110000&areaCd02=&areaCd03=&holiDaySe=&strDate=2016-03-05&endDate=2016-04-05&eduTgtSeCd=&pageIndex=2
+      logger.info('request schedulePageCount', param)
+
+      return _request({
+        areaCd01: param.code,
+        strDate: param.start,
+        endDate: param.end
+      }, function (err, $) {
+        cb(err, err ? 0 : parser.schedulePageCount($))
       })
     }
   }
