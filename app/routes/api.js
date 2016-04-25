@@ -17,25 +17,33 @@ router.route('/schedules/:start([0-9]+)/:end([0-9]+)')
           value.push(req.query.city)
         }
 
-        api.client.db.query([
-          'SELECT * FROM schedules WHERE',
-          where.join(' AND '),
-          'ORDER BY start ASC'
-        ].join(' '), value, function (err, rows) {
+        api.client.db.getConnection(function (err, conn) {
           if (err) {
             throw err
           }
 
-          res.json({
-            items: _.map(rows, function (item) {
-              return {
-                id: item.no,
-                start: moment.unix(item.start).format(),
-                end: moment.unix(item.end).format(),
-                target: item.target,
-                place: item.place,
-                addr: item.addr
-              }
+          conn.query([
+            'SELECT * FROM schedules WHERE',
+            where.join(' AND '),
+            'ORDER BY start ASC'
+          ].join(' '), value, function (err, rows) {
+            conn.release()
+
+            if (err) {
+              throw err
+            }
+
+            res.json({
+              items: _.map(rows, function (item) {
+                return {
+                  id: item.no,
+                  start: moment.unix(item.start).format(),
+                  end: moment.unix(item.end).format(),
+                  target: item.target,
+                  place: item.place,
+                  addr: item.addr
+                }
+              })
             })
           })
         })

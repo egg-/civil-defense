@@ -48,6 +48,6 @@ module.exports = {
     })
   },
   db: function (opt, cb) {
-    return require('mysql').createConnection(_.assign(config.database, opt || {}))
+    return require('mysql').createPool(_.assign(config.database, opt || {}))
   }
 }
