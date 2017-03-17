@@ -1,116 +1,54 @@
 var request = require('request')
-var qs = require('querystring')
 var moment = require('moment')
 var _ = require('lodash')
-var cheerio = require('cheerio')
-
-var endpoint = 'http://civil.safekorea.go.kr/civil/edu/eduPlan/EduPlanDbList.do?menuId=M_NST_SVC_03_02_02'
 
 // parser
 var parser = {
-  cities: function ($) {
-    var cities = []
-    $('#areaCd01 option').each(function () {
-      var $el = $(this)
-      var code = $el.attr('value')
-
-      if (code) {
-        cities.push({
-          code: code,
-          name: $el.text()
-        })
+  cities: function (res) {
+    return _.map(res.List, function (o) {
+      return {
+        code: o.orgCd,
+        name: o.orgNm
       }
     })
-    return cities
   },
-  schedulePageCount: function ($) {
-    var anchors = $('div.board_nav a')
-    var anchor = $(anchors[anchors.length - 1])
-    var url = anchor.attr('href')
-    var matches = /.*pageIndex=(\d+)/.exec(url)
-    return matches ? parseInt(matches[1], 10) : 0
-  },
-  schedules: function (city, $) {
-    var schedules = {}
-    var schedule = null
-
-    $($('table.civillist')[0]).find('tbody tr').each(function () {
-      schedule = {}
-      $(this).find('td').each(function (idx) {
-        var $el = $(this)
-        var val = _.trim($el.text())
-
-        switch (idx) {
-          case 0: // 동명
-            break
-          case 1: // 교육대상
-            schedule.target = val
-            break
-          case 2: // 날짜
-            schedule.date = val
-            break
-          case 3: // 시간
-            schedule.time = val.replace(/[\s\r\n\t]/gim, '')
-            break
-          // case 4: // 장소
-          //   schedule.place = val
-          // break
-          case 6: // 장소
-            var anchor = $el.find('a')
-            var addr = $(anchor).attr('href')
-            var regexp = /.*\('(.*)\',\s*\'(.*)\'\)/
-            var matches = regexp.exec(addr)
-            if (matches) {
-              schedule.place = matches[1]
-              schedule.addr = matches[2]
-            }
-            break
-        }
-      })
-
-      // 중복 제거
-      var key = _.values(schedule).join('-')
-      if (!schedules[key] && schedule.time) {
-        // date, time -> timestamp
-        var time = schedule.time.split('-')
-        var start = [schedule.date, time[0]].join('T') + ':00+09:00'
-        var end = [schedule.date, time[1]].join('T') + ':00+09:00'
-
-        schedule.city = city
-        schedule.start = moment(start).unix()
-        schedule.end = moment(end).unix()
-
-        delete schedule.date
-        delete schedule.time
-
-        schedules[key] = schedule
+  schedules: function (code, res) {
+    return _.map(res.eduShcList, function (o) {
+      return {
+        city: code,
+        target: o.edcTgtSeNm,
+        start: moment([o.edcDe, o.edcBeginTime].join(' '), 'YYYYMMDD HHmm').utcOffset(540).unix(),
+        end: moment([o.edcDe, o.edcEndTime].join(' '), 'YYYYMMDD HHmm').utcOffset(540).unix(),
+        place: o.edcntrNm,
+        addr: o.edcntrAdres
       }
     })
-
-    return _.values(schedules)
   }
 }
 
 function loader (logger) {
   /**
-  * load data
-  * @param  {object} param
-  * @param  {function} cb
-  */
-  var _request = function (param, cb) {
+   * load data
+   * @param {object} param
+   * @param {function} cb
+   */
+  var _requestAPI = function (endpoint, param, cb) {
     logger.debug('request', {
-      url: endpoint + '&' + qs.stringify(param)
+      url: endpoint,
+      param: param
     })
-
+    console.log(param)
     return request({
-      method: 'GET',
-      url: endpoint + '&' + qs.stringify(param)
+      method: 'POST',
+      url: 'http://civil.safekorea.go.kr' + endpoint,
+      body: param,
+      json: true
     }, function (err, res, body) {
       if (err) {
         return cb(err)
       }
 
-      cb(err, err ? null : cheerio.load(body))
+      cb(err, err ? null : body)
     })
   }
 
@@ -122,8 +60,13 @@ function loader (logger) {
     cities: function (cb) {
       logger.info('request cities.')
 
-      return _request({}, function (err, $) {
-        cb(err, err ? [] : parser.cities($))
+      return _requestAPI('/idsiSFK/sfk/ca/cac/are2/area2List.do', {
+        reqInfo: {
+          upperOrgCd: '0',
+          searchGb: ''
+        }
+      }, function (err, result) {
+        cb(err, err ? [] : parser.cities(result))
       })
     },
 
@@ -139,13 +82,17 @@ function loader (logger) {
       // &areaCd01=6110000&areaCd02=&areaCd03=&holiDaySe=&strDate=2016-03-05&endDate=2016-04-05&eduTgtSeCd=&pageIndex=2
       logger.info('request schedules', param)
 
-      return _request({
-        areaCd01: param.code,
-        strDate: param.start,
-        endDate: param.end,
-        pageIndex: param.page
-      }, function (err, $) {
-        cb(err, err ? [] : parser.schedules(param.code, $))
+      return _requestAPI('/idsiSFK/sfk/cs/cvi/edtr/selectEduSchList.do', {
+        selectList: {
+          pageIndex: param.page,
+          pageSize: 100,
+          pageUnit: 100,
+          q_area_cd_1: param.code,
+          searchDate1: param.start.format('YYYYMMDD'),
+          searchDate2: param.end.format('YYYYMMDD')
+        }
+      }, function (err, res) {
+        cb(err, err ? [] : parser.schedules(param.code, res))
       })
     },
 
@@ -157,15 +104,19 @@ function loader (logger) {
      * @param {number} param.end
      */
     schedulePageCount: function (param, cb) {
-      // &areaCd01=6110000&areaCd02=&areaCd03=&holiDaySe=&strDate=2016-03-05&endDate=2016-04-05&eduTgtSeCd=&pageIndex=2
       logger.info('request schedulePageCount', param)
 
-      return _request({
-        areaCd01: param.code,
-        strDate: param.start,
-        endDate: param.end
-      }, function (err, $) {
-        cb(err, err ? 0 : parser.schedulePageCount($))
+      return _requestAPI('/idsiSFK/sfk/cs/cvi/edtr/selectEduSchList.do', {
+        selectList: {
+          pageIndex: 1,
+          pageSize: 100,
+          pageUnit: 100,
+          q_area_cd_1: param.code,
+          searchDate1: param.start.format('YYYYMMDD'),
+          searchDate2: param.end.format('YYYYMMDD')
+        }
+      }, function (err, res) {
+        cb(err, err ? 0 : res.rtnResult.pageSize)
       })
     }
   }

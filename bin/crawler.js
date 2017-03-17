@@ -22,8 +22,8 @@ run(function * () {
     var queue = async.queue(function (task, cb) {
       loader.schedules({
         code: task.city.code,
-        start: start.format('YYYY-MM-DD'),
-        end: end.format('YYYY-MM-DD'),
+        start: start,
+        end: end,
         page: task.page
       }, function (err, schedules) {
         if (err) {
@@ -45,8 +45,8 @@ run(function * () {
 
       pageCount = yield loader.schedulePageCount.bind(null, {
         code: city.code,
-        start: start.format('YYYY-MM-DD'),
-        end: end.format('YYYY-MM-DD')
+        start: start,
+        end: end
       })
 
       // add clear data
